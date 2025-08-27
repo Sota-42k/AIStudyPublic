@@ -26,6 +26,7 @@ develop-eggs/
 .mypy_cache/
 .pytest_cache/
 .hypothesis/
+.venv/
 
 # PyInstaller
 *.manifest
