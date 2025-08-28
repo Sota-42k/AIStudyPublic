@@ -8,12 +8,14 @@ class AE(nn.Module):
         super().__init__()
         self.enc = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(28*28, 128), nn.ReLU(),
+            nn.Linear(28*28, 256), nn.ReLU(),
+            nn.Linear(256, 128), nn.ReLU(),
             nn.Linear(128, latent)
         )
         self.dec = nn.Sequential(
             nn.Linear(latent, 128), nn.ReLU(),
-            nn.Linear(128, 28*28), nn.Sigmoid()
+            nn.Linear(128, 256), nn.ReLU(),
+            nn.Linear(256, 28*28), nn.Sigmoid()
         )
 
     def forward(self, x):
@@ -25,12 +27,17 @@ class AE(nn.Module):
 class VAE(nn.Module):
     def __init__(self, latent=16):
         super().__init__()
-        self.enc = nn.Sequential(nn.Flatten(), nn.Linear(28*28, 256), nn.ReLU())
+        self.enc = nn.Sequential(
+            nn.Flatten(), 
+            nn.Linear(28*28, 512), nn.ReLU(),
+            nn.Linear(512, 256), nn.ReLU()
+        )
         self.mu    = nn.Linear(256, latent)
         self.logvar= nn.Linear(256, latent)
         self.dec = nn.Sequential(
             nn.Linear(latent, 256), nn.ReLU(),
-            nn.Linear(256, 28*28), nn.Sigmoid()
+            nn.Linear(256, 512), nn.ReLU(),
+            nn.Linear(512, 28*28), nn.Sigmoid()
         )
 
     def reparam(self, mu, logvar):

@@ -6,19 +6,36 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from mnist import get_mnist_loaders
-from simpleAE import ae_training
+from simpleAE import ae_train
 
 device = torch.device("mps")
 train_loaders, test_loader = get_mnist_loaders(num_groups=2)
 
-def mutual_train(loops=5, device=device, train_loaders=train_loaders, save=True):
-	ae1 = ae_training(device=device, train_loader=train_loaders[0], epochs=5, save=False)
-	ae2 = ae_training(device=device, train_loader=train_loaders[1], epochs=5, save=False)
+def mutual_train(epochs=5, loops=5, device=device, train_loaders=train_loaders, save=True, scheduler_type=None, scheduler_kwargs=None):
+	ae1 = ae_train(device=device, train_loader=train_loaders[0], epochs=epochs, save=False, scheduler_type=None)
+	ae2 = ae_train(device=device, train_loader=train_loaders[1], epochs=epochs, save=False, scheduler_type=None)
 	loader1 = iter(train_loaders[0])
 	loader2 = iter(train_loaders[1])
 	opt1 = optim.Adam(ae1.parameters(), lr=1e-3)
 	opt2 = optim.Adam(ae2.parameters(), lr=1e-3)
 	loss_fn = nn.MSELoss()
+
+	# Scheduler setup for both optimizers
+	scheduler1 = None
+	scheduler2 = None
+	if scheduler_type is not None:
+		if scheduler_kwargs is None:
+			scheduler_kwargs = {}
+		if scheduler_type == 'StepLR':
+			scheduler1 = optim.lr_scheduler.StepLR(opt1, **scheduler_kwargs)
+			scheduler2 = optim.lr_scheduler.StepLR(opt2, **scheduler_kwargs)
+		elif scheduler_type == 'ReduceLROnPlateau':
+			scheduler1 = optim.lr_scheduler.ReduceLROnPlateau(opt1, **scheduler_kwargs)
+			scheduler2 = optim.lr_scheduler.ReduceLROnPlateau(opt2, **scheduler_kwargs)
+		elif scheduler_type == 'ExponentialLR':
+			scheduler1 = optim.lr_scheduler.ExponentialLR(opt1, **scheduler_kwargs)
+			scheduler2 = optim.lr_scheduler.ExponentialLR(opt2, **scheduler_kwargs)
+		# Add more schedulers as needed
 
 	for loop in range(loops):
 		try:
@@ -57,13 +74,22 @@ def mutual_train(loops=5, device=device, train_loaders=train_loaders, save=True)
 		for p in ae1.parameters():
 			p.requires_grad = True
 
+		# Step schedulers if used
+		if scheduler1 is not None:
+			if scheduler_type == 'ReduceLROnPlateau':
+				scheduler1.step(loss1.item())
+				scheduler2.step(loss2.item())
+			else:
+				scheduler1.step()
+				scheduler2.step()
+
 	if save:
 		torch.save(ae1.state_dict(), "/Users/sotafujii/PycharmProjects/AIStudy/AEs/pths/m_ae1.pth")
 		torch.save(ae2.state_dict(), "/Users/sotafujii/PycharmProjects/AIStudy/AEs/pths/m_ae2.pth")
 
 	return ae1, ae2
 
-def mutual_testing(ae1, ae2, device=device, test_loader=test_loader):
+def mutual_test(ae1, ae2, device=device, test_loader=test_loader):
 	ae1.eval()
 	ae2.eval()
 	imgs, labels = next(iter(test_loader))
@@ -88,4 +114,4 @@ def mutual_testing(ae1, ae2, device=device, test_loader=test_loader):
 
 # Test the AEs and visualize results
 if __name__ == "__main__":
-	mutual_testing(*mutual_train(loops=5))
+	mutual_test(*mutual_train(loops=5))

@@ -12,10 +12,23 @@ device = torch.device("mps")
 train_loader, test_loader = get_mnist_loaders()
 
 # AE training
-def ae_training(device=device, train_loader=train_loader, epochs=10, save=True):
+def ae_train(device=device, train_loader=train_loader, epochs=10, save=True, scheduler_type=None, scheduler_kwargs=None):
     ae = AE().to(device)
     opt = optim.Adam(ae.parameters(), lr=1e-3)
     loss_fn = nn.MSELoss()
+
+    # Scheduler setup
+    scheduler = None
+    if scheduler_type is not None:
+        if scheduler_kwargs is None:
+            scheduler_kwargs = {}
+        if scheduler_type == 'StepLR':
+            scheduler = optim.lr_scheduler.StepLR(opt, **scheduler_kwargs)
+        elif scheduler_type == 'ReduceLROnPlateau':
+            scheduler = optim.lr_scheduler.ReduceLROnPlateau(opt, **scheduler_kwargs)
+        elif scheduler_type == 'ExponentialLR':
+            scheduler = optim.lr_scheduler.ExponentialLR(opt, **scheduler_kwargs)
+        # Add more schedulers as needed
 
     ae.train()
     for epoch in range(epochs):
@@ -26,12 +39,18 @@ def ae_training(device=device, train_loader=train_loader, epochs=10, save=True):
             loss = loss_fn(x_hat, imgs)
             loss.backward()
             opt.step()
+        # Step scheduler if used
+        if scheduler is not None:
+            if scheduler_type == 'ReduceLROnPlateau':
+                scheduler.step(loss.item())
+            else:
+                scheduler.step()
     if save:
         torch.save(ae.state_dict(), "/Users/sotafujii/PycharmProjects/AIStudy/AEs/pths/ae.pth")
     return ae
 
 # AE testing
-def ae_testing(ae, device=device, test_loader=test_loader):
+def ae_test(ae, device=device, test_loader=test_loader):
     ae.eval()
 
     imgs, labels = next(iter(test_loader))
@@ -54,4 +73,4 @@ def ae_testing(ae, device=device, test_loader=test_loader):
 
 # Test the VAE and visualize results
 if __name__ == "__main__":
-    ae_testing(ae_training())
+    ae_test(ae_train())
