@@ -39,14 +39,14 @@ def ae_train(device=device, train_loader=train_loader, epochs=10, save=True, sch
             loss = loss_fn(x_hat, imgs)
             loss.backward()
             opt.step()
-        # Step scheduler if used
-        if scheduler is not None:
-            if scheduler_type == 'ReduceLROnPlateau':
-                scheduler.step(loss.item())
-            else:
-                scheduler.step()
+            # Step scheduler if used (should be after optimizer.step())
+            if scheduler is not None:
+                if scheduler_type == 'ReduceLROnPlateau':
+                    scheduler.step(loss.item())
+                else:
+                    scheduler.step()
     if save:
-        torch.save(ae.state_dict(), "/Users/sotafujii/PycharmProjects/AIStudy/AEs/pths/ae.pth")
+        torch.save(ae.state_dict(), "/Volumes/Buffalo-SSD/AIStudy/AEs/pths/ae.pth")
     return ae
 
 # AE testing

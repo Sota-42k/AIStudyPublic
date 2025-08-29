@@ -11,9 +11,9 @@ from simpleAE import ae_train
 device = torch.device("mps")
 train_loaders, test_loader = get_mnist_loaders(num_groups=2)
 
-def mutual_train(epochs=5, loops=5, device=device, train_loaders=train_loaders, save=True, scheduler_type=None, scheduler_kwargs=None):
-	ae1 = ae_train(device=device, train_loader=train_loaders[0], epochs=epochs, save=False, scheduler_type=None)
-	ae2 = ae_train(device=device, train_loader=train_loaders[1], epochs=epochs, save=False, scheduler_type=None)
+def mutual_train(pretrain_epochs=5, loops=5, device=device, train_loaders=train_loaders, save=True, scheduler_type=None, scheduler_kwargs=None):
+	ae1 = ae_train(device=device, train_loader=train_loaders[0], epochs=pretrain_epochs, save=False, scheduler_type=None)
+	ae2 = ae_train(device=device, train_loader=train_loaders[1], epochs=pretrain_epochs, save=False, scheduler_type=None)
 	loader1 = iter(train_loaders[0])
 	loader2 = iter(train_loaders[1])
 	opt1 = optim.Adam(ae1.parameters(), lr=1e-3)
@@ -62,6 +62,11 @@ def mutual_train(epochs=5, loops=5, device=device, train_loaders=train_loaders, 
 		opt1.step()
 		for p in ae2.parameters():
 			p.requires_grad = True
+		if scheduler1 is not None:
+			if scheduler_type == 'ReduceLROnPlateau':
+				scheduler1.step(loss1.item())
+			else:
+				scheduler1.step()
 		# ae2 output -> ae1 input
 		for p in ae1.parameters():
 			p.requires_grad = False
@@ -73,19 +78,15 @@ def mutual_train(epochs=5, loops=5, device=device, train_loaders=train_loaders, 
 		opt2.step()
 		for p in ae1.parameters():
 			p.requires_grad = True
-
-		# Step schedulers if used
-		if scheduler1 is not None:
+		if scheduler2 is not None:
 			if scheduler_type == 'ReduceLROnPlateau':
-				scheduler1.step(loss1.item())
 				scheduler2.step(loss2.item())
 			else:
-				scheduler1.step()
 				scheduler2.step()
 
 	if save:
-		torch.save(ae1.state_dict(), "/Users/sotafujii/PycharmProjects/AIStudy/AEs/pths/m_ae1.pth")
-		torch.save(ae2.state_dict(), "/Users/sotafujii/PycharmProjects/AIStudy/AEs/pths/m_ae2.pth")
+		torch.save(ae1.state_dict(), "/Volumes/Buffalo-SSD/AIStudy/AEs/pths/m_ae1.pth")
+		torch.save(ae2.state_dict(), "/Volumes/Buffalo-SSD/AIStudy/AEs/pths/m_ae2.pth")
 
 	return ae1, ae2
 

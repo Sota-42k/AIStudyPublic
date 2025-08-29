@@ -38,14 +38,14 @@ def vae_train(device=device, train_loader=train_loader, epochs=10, save=True, sc
             loss = vae.vae_loss(x_hat, imgs, mu, logvar)
             loss.backward()
             opt.step()
-        # Step scheduler if used
-        if scheduler is not None:
-            if scheduler_type == 'ReduceLROnPlateau':
-                scheduler.step(loss.item())
-            else:
-                scheduler.step()
+            # Step scheduler if used (should be after optimizer.step())
+            if scheduler is not None:
+                if scheduler_type == 'ReduceLROnPlateau':
+                    scheduler.step(loss.item())
+                else:
+                    scheduler.step()
     if save:
-        torch.save(vae.state_dict(), "/Users/sotafujii/PycharmProjects/AIStudy/AEs/pths/vae.pth")
+        torch.save(vae.state_dict(), "/Volumes/Buffalo-SSD/AIStudy/AEs/pths/vae.pth")
     return vae
 
 # VAE testing

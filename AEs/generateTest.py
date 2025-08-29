@@ -8,8 +8,9 @@ from models import AE, VAE
 device = torch.device("mps")
 
 def get_all_model_outputs():
-	# Each row: [simpleAE, simpleVAE, mutualAE1, mutualAE2, mutualVAE1, mutualVAE2]
+	# Each row: [simpleAE, simpleVAE, mutualAE1, mutualAE2, mutualVAE1, mutualVAE2, randomAE1, randomAE2, randomAE3, randomVAE1, randomVAE2, randomVAE3]
 	outputs = []
+	model_names = []
 	# simpleAE
 	ae = AE().to(device)
 	if os.path.exists("../AEs/pths/ae.pth"):
@@ -23,6 +24,7 @@ def get_all_model_outputs():
 			img = ae.dec(latent).view(28, 28).cpu().numpy()
 			row.append(img)
 	outputs.append(row)
+	model_names.append('simpleAE')
 	# simpleVAE
 	vae = VAE().to(device)
 	if os.path.exists("../AEs/pths/vae.pth"):
@@ -36,6 +38,7 @@ def get_all_model_outputs():
 			img = vae.dec(latent).view(28, 28).cpu().numpy()
 			row.append(img)
 	outputs.append(row)
+	model_names.append('simpleVAE')
 	# mutualAE
 	ae1 = AE().to(device)
 	ae2 = AE().to(device)
@@ -57,7 +60,9 @@ def get_all_model_outputs():
 			row1.append(img1)
 			row2.append(img2)
 	outputs.append(row1)
+	model_names.append('mutualAE1')
 	outputs.append(row2)
+	model_names.append('mutualAE2')
 	# mutualVAE
 	vae1 = VAE().to(device)
 	vae2 = VAE().to(device)
@@ -79,25 +84,63 @@ def get_all_model_outputs():
 			row1.append(img1)
 			row2.append(img2)
 	outputs.append(row1)
+	model_names.append('mutualVAE1')
 	outputs.append(row2)
-	return outputs
+	model_names.append('mutualVAE2')
+	# randomAE* (auto-detect count)
+	rand_ae_idx = 1
+	while True:
+		pth = f"AEs/pths/rand_ae{rand_ae_idx}.pth"
+		if not os.path.exists(pth):
+			break
+		ae_rand = AE().to(device)
+		ae_rand.load_state_dict(torch.load(pth, map_location=device))
+		ae_rand.eval()
+		row = []
+		with torch.no_grad():
+			for digit in range(10):
+				latent = torch.zeros((1, 32), device=device)
+				latent[0, digit % 32] = 1.0
+				img = ae_rand.dec(latent).view(28, 28).cpu().numpy()
+				row.append(img)
+		outputs.append(row)
+		model_names.append(f'randomAE{rand_ae_idx}')
+		rand_ae_idx += 1
+	# randomVAE* (auto-detect count)
+	rand_vae_idx = 1
+	while True:
+		pth = f"AEs/pths/rand_vae{rand_vae_idx}.pth"
+		if not os.path.exists(pth):
+			break
+		vae_rand = VAE().to(device)
+		vae_rand.load_state_dict(torch.load(pth, map_location=device))
+		vae_rand.eval()
+		row = []
+		with torch.no_grad():
+			for digit in range(10):
+				latent = torch.zeros((1, 16), device=device)
+				latent[0, digit % 16] = 1.0
+				img = vae_rand.dec(latent).view(28, 28).cpu().numpy()
+				row.append(img)
+		outputs.append(row)
+		model_names.append(f'randomVAE{rand_vae_idx}')
+		rand_vae_idx += 1
+	return outputs, model_names
 
 def show_all_model_outputs():
-	outputs = get_all_model_outputs()
-	model_names = [
-		'simpleAE', 'simpleVAE', 'mutualAE1', 'mutualAE2', 'mutualVAE1', 'mutualVAE2'
-	]
-	fig, axes = plt.subplots(len(outputs), 10, figsize=(20, 2*len(outputs)))
-	for row_idx, row in enumerate(outputs):
-		for col_idx, img in enumerate(row):
-			axes[row_idx, col_idx].imshow(img, cmap='gray')
-			axes[row_idx, col_idx].axis('off')
-			if row_idx == 0:
-				axes[row_idx, col_idx].set_title(str(col_idx))
-		axes[row_idx, 0].set_ylabel(model_names[row_idx], rotation=0, labelpad=40, fontsize=12, va='center')
-	plt.tight_layout()
-	plt.suptitle('All AE/VAE Model Outputs', fontsize=16, y=1.02)
-	plt.show()
+		outputs, model_names = get_all_model_outputs()
+		fig, axes = plt.subplots(len(outputs), 10, figsize=(20, 2*len(outputs)))
+		for row_idx, row in enumerate(outputs):
+			for col_idx, img in enumerate(row):
+				axes[row_idx, col_idx].imshow(img, cmap='gray')
+				axes[row_idx, col_idx].axis('off')
+				if row_idx == 0:
+					axes[row_idx, col_idx].set_title(str(col_idx))
+			axes[row_idx, 0].set_ylabel(model_names[row_idx], rotation=0, labelpad=40, fontsize=12, va='center')
+			print(f"Displayed {model_names[row_idx]}")
+		plt.tight_layout()
+		plt.suptitle('All AE/VAE Model Outputs', fontsize=16, y=1.02)
+		plt.show()
 
 if __name__ == "__main__":
 	show_all_model_outputs()
