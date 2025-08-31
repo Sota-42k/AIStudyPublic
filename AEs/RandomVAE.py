@@ -8,7 +8,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from mnist import get_mnist_loaders
 from SimpleVAE import vae_train
-from Models import VAE
 
 def random_train(num_vaes=3, pretrain_epochs=5, loops=10, device=None, scheduler_type=None, scheduler_kwargs=None, save=True, beta=1.0):
     if device is None:
@@ -53,22 +52,24 @@ def random_train(num_vaes=3, pretrain_epochs=5, loops=10, device=None, scheduler
         if order[0] != idx:
             order.remove(idx)
             order = [idx] + order
-        # Forward pass through the chain
+        # Forward pass through the chain (no no_grad)
         input_imgs = imgs
         mu, logvar = None, None
         for i in range(num_vaes):
             opts[order[i]].zero_grad()
-            if i == order[-1]:
-                out, mu, logvar = vaes[order[i]](input_imgs)
-            else:
-                with torch.no_grad():
-                    out, mu, logvar = vaes[order[i]](input_imgs)
-            # If not last VAE, pass output to next VAE
+            out, mu, logvar = vaes[order[i]](input_imgs)
             if i < num_vaes-1:
                 input_imgs = out.view_as(input_imgs)
         # Loss: compare final output to original input, add KL
         loss = recon_loss(out, imgs) + beta * kl_div(mu, logvar)
         loss.backward()
+        # Zero gradients for all but the last VAE in the chain
+        for j in range(num_vaes):
+            if j != order[-1]:
+                for p in vaes[order[j]].parameters():
+                    if p.grad is not None:
+                        p.grad.detach_()
+                        p.grad.zero_()
         opts[order[-1]].step()
         # Step scheduler only for the optimizer that was stepped
         scheduler = schedulers[order[-1]]

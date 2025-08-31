@@ -60,7 +60,7 @@ def single_teacher_train(device=None, epochs=10, save=True, scheduler_type=None,
         for (imgs1, _), _ in zip(train_loader1, train_loader2):
             imgs1 = imgs1.to(device)
             with torch.no_grad():
-                x1_hat_for_student = vae1(imgs1)
+                x1_hat_for_student, _, _ = vae1(imgs1)
             opt2.zero_grad()
             x2_input = x1_hat_for_student.detach()
             x2_hat, mu2, logvar2 = vae2(x2_input)
@@ -73,8 +73,8 @@ def single_teacher_train(device=None, epochs=10, save=True, scheduler_type=None,
                 else:
                     scheduler2.step()
     if save:
-        torch.save(vae1.state_dict(), os.path.join(os.path.dirname(__file__), "pths", "teacher_vae1.pth"))
-        torch.save(vae2.state_dict(), os.path.join(os.path.dirname(__file__), "pths", "student_vae2.pth"))
+        torch.save(vae1.state_dict(), os.path.join(os.path.dirname(__file__), "pths", "s_teacher_vae.pth"))
+        torch.save(vae2.state_dict(), os.path.join(os.path.dirname(__file__), "pths", "s_student_vae.pth"))
     return vae1, vae2
 
 

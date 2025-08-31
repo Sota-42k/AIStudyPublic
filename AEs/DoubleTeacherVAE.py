@@ -6,7 +6,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from mnist import get_mnist_loaders
 from Models import VAE
 
-def double_teacher_train(device=None, epochs=10, save=True, scheduler_type=None, scheduler_kwargs=None, combine_method='mean'):
+def double_teacher_train(device=None, epochs=10, save=True, scheduler_type=None, scheduler_kwargs=None):
     """
     2つの教師VAE(VAE1, VAE2)の潜在表現（concat）から生徒VAE(VAE3)を学習する。
     """
@@ -16,14 +16,17 @@ def double_teacher_train(device=None, epochs=10, save=True, scheduler_type=None,
     train_loaders, _ = get_mnist_loaders(num_groups=2)
     train_loader1, train_loader2 = train_loaders
 
-    vae1 = VAE().to(device)
-    vae2 = VAE().to(device)
-    latent = 64
+    # 教師も生徒もlatent=32
+    latent = 32
+    vae1 = VAE(latent=latent).to(device)
+    vae2 = VAE(latent=latent).to(device)
     vae3 = VAE(latent=latent).to(device)
+    # 圧縮用線形層（教師2人のlatentをconcat→32次元に圧縮）
+    compress_linear = nn.Linear(64, 32).to(device)
 
     opt1 = optim.Adam(vae1.parameters(), lr=1e-3)
     opt2 = optim.Adam(vae2.parameters(), lr=1e-3)
-    opt3 = optim.Adam(vae3.parameters(), lr=1e-3)
+    opt3 = optim.Adam(list(vae3.parameters()) + list(compress_linear.parameters()), lr=1e-3)
 
     scheduler1 = scheduler2 = scheduler3 = None
     if scheduler_type is not None:
@@ -45,11 +48,11 @@ def double_teacher_train(device=None, epochs=10, save=True, scheduler_type=None,
     vae1.train()
     vae2.train()
     vae3.train()
+    compress_linear.train()
 
-    # 1. 教師の学習
     teacher_epochs = epochs // 2
     student_epochs = epochs
-
+    # 1. 教師の学習
     for epoch in range(teacher_epochs):
         for (imgs1, _), (imgs2, _) in zip(train_loader1, train_loader2):
             imgs1 = imgs1.to(device)
@@ -85,13 +88,13 @@ def double_teacher_train(device=None, epochs=10, save=True, scheduler_type=None,
     for param in vae2.parameters():
         param.requires_grad = False
 
+
     # 3. 生徒の学習（concatのみ）
     for epoch in range(student_epochs):
         for (imgs1, _), (imgs2, _) in zip(train_loader1, train_loader2):
             imgs1 = imgs1.to(device)
             imgs2 = imgs2.to(device)
 
-            # VAE3: 教師2つの潜在表現（concat）のみで学習
             with torch.no_grad():
                 h1 = vae1.enc(imgs1)
                 mu1, logvar1 = vae1.mu(h1), vae1.logvar(h1)
@@ -99,33 +102,29 @@ def double_teacher_train(device=None, epochs=10, save=True, scheduler_type=None,
                 h2 = vae2.enc(imgs2)
                 mu2, logvar2 = vae2.mu(h2), vae2.logvar(h2)
                 z2 = vae2.reparam(mu2, logvar2)
-                z_student = torch.cat([z1, z2], dim=1)
                 x1_hat, _, _ = vae1(imgs1)
                 x2_hat, _, _ = vae2(imgs2)
-                if combine_method == 'mean':
-                    x_teacher_target = (x1_hat + x2_hat) / 2
-                elif combine_method == 'sum':
-                    x_teacher_target = x1_hat + x2_hat
-                else:
-                    x_teacher_target = (x1_hat + x2_hat) / 2
+                x_teacher_target = (x1_hat + x2_hat) / 2
+            # concat→線形層で圧縮
+            z_cat = torch.cat([z1, z2], dim=1)  # (batch, 64)
+            z_compressed = compress_linear(z_cat)  # (batch, 32)
+            x_hat = vae3.dec(z_compressed).view(-1, 1, 28, 28)
+            loss = nn.functional.mse_loss(x_hat, x_teacher_target)
             opt3.zero_grad()
-            x3_hat = vae3.dec(z_student).view(-1, 1, 28, 28)
-            # 生徒VAEの損失は教師の平均出力とのMSEのみ
-            loss3 = nn.functional.mse_loss(x3_hat, x_teacher_target)
-            loss3.backward()
+            loss.backward()
             opt3.step()
 
             # scheduler
             if scheduler3 is not None:
                 if scheduler_type == 'ReduceLROnPlateau':
-                    scheduler3.step(loss3.item())
+                    scheduler3.step(loss.item())
                 else:
                     scheduler3.step()
 
     if save:
-        torch.save(vae1.state_dict(), os.path.join(os.path.dirname(__file__), "pths", "teacher1_vae.pth"))
-        torch.save(vae2.state_dict(), os.path.join(os.path.dirname(__file__), "pths", "teacher2_vae.pth"))
-        torch.save(vae3.state_dict(), os.path.join(os.path.dirname(__file__), "pths", "student_vae.pth"))
+        torch.save(vae1.state_dict(), os.path.join(os.path.dirname(__file__), "pths", "d_teacher1_vae.pth"))
+        torch.save(vae2.state_dict(), os.path.join(os.path.dirname(__file__), "pths", "d_teacher2_vae.pth"))
+        torch.save(vae3.state_dict(), os.path.join(os.path.dirname(__file__), "pths", "d_student_vae.pth"))
     return vae1, vae2, vae3
 
 

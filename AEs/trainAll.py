@@ -18,6 +18,7 @@ def trainAll():
         scheduler_type='StepLR',
         scheduler_kwargs={'step_size': 100, 'gamma': 0.5}
     )
+
     print("Training Simple VAE...")
     vae_train(
         epochs=200,
@@ -25,6 +26,7 @@ def trainAll():
         scheduler_type='StepLR',
         scheduler_kwargs={'step_size': 100, 'gamma': 0.5}
     )
+
     print("Training Mutual Connection AE...")
     ae_mutual_train(
         pretrain_epochs=100,
@@ -33,6 +35,7 @@ def trainAll():
         scheduler_type='StepLR',
         scheduler_kwargs={'step_size': 100, 'gamma': 0.5}
     )
+
     print("Training Mutual Connection VAE...")
     vae_mutual_train(
         pretrain_epochs=100,
@@ -41,6 +44,7 @@ def trainAll():
         scheduler_type='StepLR',
         scheduler_kwargs={'step_size': 100, 'gamma': 0.5}
     )
+
     print("Training Random Connection AE...")
     ae_random_train(
         num_aes=16,
@@ -50,6 +54,7 @@ def trainAll():
         scheduler_type='StepLR',
         scheduler_kwargs={'step_size': 100, 'gamma': 0.5}
     )
+
     print("Training Random Connection VAE...")
     vae_random_train(
         num_vaes=16,
@@ -60,7 +65,7 @@ def trainAll():
         scheduler_kwargs={'step_size': 100, 'gamma': 0.5}
     )
 
-    print("Training Single Teacher AE (Teacher-Student)...")
+    print("Training Single Teacher AE...")
     single_teacher_ae_train(
         epochs=100,
         save=True,
@@ -68,7 +73,7 @@ def trainAll():
         scheduler_kwargs={'step_size': 100, 'gamma': 0.5}
     )
 
-    print("Training Single Teacher VAE (Teacher-Student)...")
+    print("Training Single Teacher VAE...")
     single_teacher_vae_train(
         epochs=100,
         save=True,
@@ -76,7 +81,7 @@ def trainAll():
         scheduler_kwargs={'step_size': 100, 'gamma': 0.5}
     )
 
-    print("Training Double Teacher AE (Teacher-Student)...")
+    print("Training Double Teacher AE...")
     double_teacher_ae_train(
         epochs=200,
         save=True,
@@ -84,7 +89,7 @@ def trainAll():
         scheduler_kwargs={'step_size': 100, 'gamma': 0.5}
     )
 
-    print("Training Double Teacher VAE (Teacher-Student)...")
+    print("Training Double Teacher VAE...")
     double_teacher_vae_train(
         epochs=200,
         save=True,

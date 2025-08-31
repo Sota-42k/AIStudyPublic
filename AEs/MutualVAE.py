@@ -64,14 +64,10 @@ def mutual_train(pretrain_epochs=5, loops=5, device=None, train_loaders=None, sa
         # vae1 output -> vae2 input
         opt1.zero_grad()
         x1_hat, mu1, logvar1 = vae1(imgs1)
-        x1_12_hat, _, _ = vae2(x1_hat)
+        with torch.no_grad():
+            x1_12_hat, _, _ = vae2(x1_hat)
         loss1 = recon_loss(x1_12_hat, imgs2) + beta * kl_div(mu1, logvar1)
         loss1.backward()
-        # Zero gradients for vae2 so only vae1 is updated
-        for p in vae2.parameters():
-            if p.grad is not None:
-                p.grad.detach_()
-                p.grad.zero_()
         opt1.step()
         if scheduler1 is not None:
             if scheduler_type == 'ReduceLROnPlateau':
@@ -81,14 +77,10 @@ def mutual_train(pretrain_epochs=5, loops=5, device=None, train_loaders=None, sa
         # vae2 output -> vae1 input
         opt2.zero_grad()
         x2_hat, mu2, logvar2 = vae2(imgs2)
-        x2_21_hat, _, _ = vae1(x2_hat)
+        with torch.no_grad():
+            x2_21_hat, _, _ = vae1(x2_hat)
         loss2 = recon_loss(x2_21_hat, imgs1) + beta * kl_div(mu2, logvar2)
         loss2.backward()
-        # Zero gradients for vae1 so only vae2 is updated
-        for p in vae1.parameters():
-            if p.grad is not None:
-                p.grad.detach_()
-                p.grad.zero_()
         opt2.step()
         if scheduler2 is not None:
             if scheduler_type == 'ReduceLROnPlateau':

@@ -9,7 +9,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from mnist import get_mnist_loaders
 from SimpleAE import ae_train
-from Models import AE
 
 def random_train(num_aes=3, pretrain_epochs=5, loops=10, device=None, scheduler_type=None, scheduler_kwargs=None, save=True):
 	if device is None:
@@ -53,21 +52,23 @@ def random_train(num_aes=3, pretrain_epochs=5, loops=10, device=None, scheduler_
 		if order[0] != idx:
 			order.remove(idx)
 			order = [idx] + order
-	       # Forward pass through the chain
+		# Forward pass through the chain (no no_grad)
 		input_imgs = imgs
 		for i in range(num_aes):
 			opts[order[i]].zero_grad()
-			if i == order[-1]:
-				out = aes[order[i]](input_imgs)
-			else:
-				with torch.no_grad():
-					out = aes[order[i]](input_imgs)
-			# If not last AE, pass output to next AE
+			out = aes[order[i]](input_imgs)
 			if i < num_aes-1:
 				input_imgs = out.view_as(input_imgs)
 		# Loss: compare final output to original input
 		loss = loss_fn(out, imgs)
 		loss.backward()
+		# Zero gradients for all but the last AE in the chain
+		for j in range(num_aes):
+			if j != order[-1]:
+				for p in aes[order[j]].parameters():
+					if p.grad is not None:
+						p.grad.detach_()
+						p.grad.zero_()
 		opts[order[-1]].step()
 		# Step scheduler only for the optimizer that was stepped
 		scheduler = schedulers[order[-1]]

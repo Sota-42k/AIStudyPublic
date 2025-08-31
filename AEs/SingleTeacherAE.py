@@ -75,8 +75,8 @@ def single_teacher_train(device=None, epochs=10, save=True, scheduler_type=None,
 				else:
 					scheduler2.step()
 	if save:
-		torch.save(ae1.state_dict(), os.path.join(os.path.dirname(__file__), "pths", "teacher_ae.pth"))
-		torch.save(ae2.state_dict(), os.path.join(os.path.dirname(__file__), "pths", "student_ae.pth"))
+		torch.save(ae1.state_dict(), os.path.join(os.path.dirname(__file__), "pths", "s_teacher_ae.pth"))
+		torch.save(ae2.state_dict(), os.path.join(os.path.dirname(__file__), "pths", "s_student_ae.pth"))
 	return ae1, ae2
 
 
