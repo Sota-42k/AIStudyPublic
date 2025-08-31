@@ -8,11 +8,11 @@ if os.path.exists('pths'):
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from models import AE, VAE
+from Models import AE, VAE
 from mnist import get_mnist_loaders
 import numpy as np
 
-device = torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
+device = torch.device("mps" if torch.backends.mps.is_available() else "cpu") if torch.backends.mps.is_available() else torch.device("cpu")
 
 def load_models():
 	models = {}
@@ -96,6 +96,98 @@ def load_models():
 		models[f'randomVAE{rand_vae_idx}'] = vae_rand
 		model_names.append(f'randomVAE{rand_vae_idx}')
 		rand_vae_idx += 1
+	# single teacher AE
+	from SingleTeacherAE import AE as STAE
+	st_ae_teacher = STAE().to(device)
+	st_ae_student = STAE().to(device)
+	pth_teacher = "AEs/pths/teacher_ae.pth"
+	pth_student = "AEs/pths/student_ae.pth"
+	if os.path.exists(pth_teacher):
+		st_ae_teacher.load_state_dict(torch.load(pth_teacher, map_location=device))
+		print("Loaded singleTeacherAE_Teacher")
+	if os.path.exists(pth_student):
+		st_ae_student.load_state_dict(torch.load(pth_student, map_location=device))
+		print("Loaded singleTeacherAE_Student")
+	st_ae_teacher.eval()
+	st_ae_student.eval()
+	models['singleTeacherAE_Teacher'] = st_ae_teacher
+	model_names.append('singleTeacherAE_Teacher')
+	models['singleTeacherAE_Student'] = st_ae_student
+	model_names.append('singleTeacherAE_Student')
+
+	# single teacher VAE
+	from SingleTeacherVAE import VAE as STVAE
+	st_vae_teacher = STVAE().to(device)
+	st_vae_student = STVAE().to(device)
+	pth_teacher = "AEs/pths/teacher_vae1.pth"
+	pth_student = "AEs/pths/student_vae2.pth"
+	if os.path.exists(pth_teacher):
+		st_vae_teacher.load_state_dict(torch.load(pth_teacher, map_location=device))
+		print("Loaded singleTeacherVAE_Teacher")
+	if os.path.exists(pth_student):
+		st_vae_student.load_state_dict(torch.load(pth_student, map_location=device))
+		print("Loaded singleTeacherVAE_Student")
+	st_vae_teacher.eval()
+	st_vae_student.eval()
+	models['singleTeacherVAE_Teacher'] = st_vae_teacher
+	model_names.append('singleTeacherVAE_Teacher')
+	models['singleTeacherVAE_Student'] = st_vae_student
+	model_names.append('singleTeacherVAE_Student')
+
+	# double teacher AE
+	from DoubleTeacherAE import AE as DTAE
+	dtae_teacher1 = DTAE().to(device)
+	dtae_teacher2 = DTAE().to(device)
+	dtae_student = DTAE().to(device)
+	pth_teacher1 = "AEs/pths/teacher1_ae.pth"
+	pth_teacher2 = "AEs/pths/teacher2_ae.pth"
+	pth_student = "AEs/pths/student_ae.pth"
+	if os.path.exists(pth_teacher1):
+		dtae_teacher1.load_state_dict(torch.load(pth_teacher1, map_location=device))
+		print("Loaded doubleTeacherAE_Teacher1")
+	if os.path.exists(pth_teacher2):
+		dtae_teacher2.load_state_dict(torch.load(pth_teacher2, map_location=device))
+		print("Loaded doubleTeacherAE_Teacher2")
+	if os.path.exists(pth_student):
+		dtae_student.load_state_dict(torch.load(pth_student, map_location=device))
+		print("Loaded doubleTeacherAE_Student")
+	dtae_teacher1.eval()
+	dtae_teacher2.eval()
+	dtae_student.eval()
+	models['doubleTeacherAE_Teacher1'] = dtae_teacher1
+	model_names.append('doubleTeacherAE_Teacher1')
+	models['doubleTeacherAE_Teacher2'] = dtae_teacher2
+	model_names.append('doubleTeacherAE_Teacher2')
+	models['doubleTeacherAE_Student'] = dtae_student
+	model_names.append('doubleTeacherAE_Student')
+
+	# double teacher VAE
+	from DoubleTeacherVAE import VAE as DTVAE
+	dtvae_teacher1 = DTVAE().to(device)
+	dtvae_teacher2 = DTVAE().to(device)
+	dtvae_student = DTVAE().to(device)
+	pth_teacher1 = "AEs/pths/teacher1_vae.pth"
+	pth_teacher2 = "AEs/pths/teacher2_vae.pth"
+	pth_student = "AEs/pths/student_vae.pth"
+	if os.path.exists(pth_teacher1):
+		dtvae_teacher1.load_state_dict(torch.load(pth_teacher1, map_location=device))
+		print("Loaded doubleTeacherVAE_Teacher1")
+	if os.path.exists(pth_teacher2):
+		dtvae_teacher2.load_state_dict(torch.load(pth_teacher2, map_location=device))
+		print("Loaded doubleTeacherVAE_Teacher2")
+	if os.path.exists(pth_student):
+		dtvae_student.load_state_dict(torch.load(pth_student, map_location=device))
+		print("Loaded doubleTeacherVAE_Student")
+	dtvae_teacher1.eval()
+	dtvae_teacher2.eval()
+	dtvae_student.eval()
+	models['doubleTeacherVAE_Teacher1'] = dtvae_teacher1
+	model_names.append('doubleTeacherVAE_Teacher1')
+	models['doubleTeacherVAE_Teacher2'] = dtvae_teacher2
+	model_names.append('doubleTeacherVAE_Teacher2')
+	models['doubleTeacherVAE_Student'] = dtvae_student
+	model_names.append('doubleTeacherVAE_Student')
+
 	return models, model_names
 
 def guess_digit(model, img, is_vae=False, latent_dim=32):

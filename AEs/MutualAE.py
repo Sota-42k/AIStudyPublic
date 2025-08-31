@@ -6,18 +6,23 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from mnist import get_mnist_loaders
-from simpleAE import ae_train
+from SimpleAE import ae_train
 
-device = torch.device("mps")
-train_loaders, test_loader = get_mnist_loaders(num_groups=2)
+def mutual_train(pretrain_epochs=5, loops=5, device=None, train_loaders=None, save=True, scheduler_type=None, scheduler_kwargs=None):
+	if device is None:
+		device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+	if train_loaders is None:
+		train_loaders, _ = get_mnist_loaders(num_groups=2)
 
-def mutual_train(pretrain_epochs=5, loops=5, device=device, train_loaders=train_loaders, save=True, scheduler_type=None, scheduler_kwargs=None):
 	ae1 = ae_train(device=device, train_loader=train_loaders[0], epochs=pretrain_epochs, save=False, scheduler_type=None)
 	ae2 = ae_train(device=device, train_loader=train_loaders[1], epochs=pretrain_epochs, save=False, scheduler_type=None)
-	loader1 = iter(train_loaders[0])
-	loader2 = iter(train_loaders[1])
+	
+	train_loader1 = iter(train_loaders[0])
+	train_loader2 = iter(train_loaders[1])
+
 	opt1 = optim.Adam(ae1.parameters(), lr=1e-3)
 	opt2 = optim.Adam(ae2.parameters(), lr=1e-3)
+	
 	loss_fn = nn.MSELoss()
 
 	# Scheduler setup for both optimizers
@@ -39,45 +44,48 @@ def mutual_train(pretrain_epochs=5, loops=5, device=device, train_loaders=train_
 
 	for loop in range(loops):
 		try:
-			imgs1, _ = next(loader1)
+			imgs1, _ = next(train_loader1)
 		except StopIteration:
-			loader1 = iter(train_loaders[0])
-			imgs1, _ = next(loader1)
+			train_loader1 = iter(train_loaders[0])
+			imgs1, _ = next(train_loader1)
 		try:
-			imgs2, _ = next(loader2)
+			imgs2, _ = next(train_loader2)
 		except StopIteration:
-			loader2 = iter(train_loaders[1])
-			imgs2, _ = next(loader2)
+			train_loader2 = iter(train_loaders[1])
+			imgs2, _ = next(train_loader2)
 		imgs1 = imgs1.to(device)
 		imgs2 = imgs2.to(device)
 
 		# ae1 output -> ae2 input
-		for p in ae2.parameters():
-			p.requires_grad = False
 		opt1.zero_grad()
 		out1 = ae1(imgs1)
 		out2 = ae2(out1)
 		loss1 = loss_fn(out2, imgs2)
 		loss1.backward()
-		opt1.step()
+		# Zero gradients for ae2 so only ae1 is updated
 		for p in ae2.parameters():
-			p.requires_grad = True
+			if p.grad is not None:
+				p.grad.detach_()
+				p.grad.zero_()
+		opt1.step()
 		if scheduler1 is not None:
 			if scheduler_type == 'ReduceLROnPlateau':
 				scheduler1.step(loss1.item())
 			else:
 				scheduler1.step()
+		
 		# ae2 output -> ae1 input
-		for p in ae1.parameters():
-			p.requires_grad = False
 		opt2.zero_grad()
 		out2b = ae2(imgs2)
 		out1b = ae1(out2b)
 		loss2 = loss_fn(out1b, imgs1)
 		loss2.backward()
-		opt2.step()
+		# Zero gradients for ae1 so only ae2 is updated
 		for p in ae1.parameters():
-			p.requires_grad = True
+			if p.grad is not None:
+				p.grad.detach_()
+				p.grad.zero_()
+		opt2.step()
 		if scheduler2 is not None:
 			if scheduler_type == 'ReduceLROnPlateau':
 				scheduler2.step(loss2.item())
@@ -90,11 +98,18 @@ def mutual_train(pretrain_epochs=5, loops=5, device=device, train_loaders=train_
 
 	return ae1, ae2
 
-def mutual_test(ae1, ae2, device=device, test_loader=test_loader):
+def mutual_test(ae1, ae2, device=None, test_loader=None, save_fig=False):
+	if device is None:
+		device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+	if test_loader is None:
+		_, test_loader = get_mnist_loaders()
+
 	ae1.eval()
 	ae2.eval()
+
 	imgs, labels = next(iter(test_loader))
 	imgs = imgs.to(device)
+	
 	with torch.no_grad():
 		recon_ae1 = ae1(imgs)
 		recon_ae2 = ae2(imgs)
@@ -111,6 +126,8 @@ def mutual_test(ae1, ae2, device=device, test_loader=test_loader):
 	axes[1, 0].set_ylabel('Reconstructed AE1')
 	axes[2, 0].set_ylabel('Reconstructed AE2')
 	plt.tight_layout()
+	if save_fig:
+		plt.savefig("AEs/samples/mutualAE_test.png")
 	plt.show()
 
 # Test the AEs and visualize results

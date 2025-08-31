@@ -8,13 +8,15 @@ import random
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from mnist import get_mnist_loaders
-from simpleAE import ae_train
-from models import AE
+from SimpleAE import ae_train
+from Models import AE
 
-device = torch.device("mps")
+def random_train(num_aes=3, pretrain_epochs=5, loops=10, device=None, scheduler_type=None, scheduler_kwargs=None, save=True):
+	if device is None:
+		device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+	
+	train_loaders, _ = get_mnist_loaders(num_groups=num_aes)
 
-def random_train(num_aes=3, pretrain_epochs=5, loops=10, device=device, scheduler_type=None, scheduler_kwargs=None, save=True):
-	train_loaders, test_loader = get_mnist_loaders(num_groups=num_aes)
 	aes = [ae_train(device=device, train_loader=train_loaders[i], epochs=pretrain_epochs, save=False, scheduler_type=None) for i in range(num_aes)]
 	opts = [optim.Adam(ae.parameters(), lr=1e-3) for ae in aes]
 	loss_fn = nn.MSELoss()
@@ -51,11 +53,15 @@ def random_train(num_aes=3, pretrain_epochs=5, loops=10, device=device, schedule
 		if order[0] != idx:
 			order.remove(idx)
 			order = [idx] + order
-		# Forward pass through the chain
+	       # Forward pass through the chain
 		input_imgs = imgs
 		for i in range(num_aes):
 			opts[order[i]].zero_grad()
-			out = aes[order[i]](input_imgs)
+			if i == order[-1]:
+				out = aes[order[i]](input_imgs)
+			else:
+				with torch.no_grad():
+					out = aes[order[i]](input_imgs)
 			# If not last AE, pass output to next AE
 			if i < num_aes-1:
 				input_imgs = out.view_as(input_imgs)
@@ -74,10 +80,12 @@ def random_train(num_aes=3, pretrain_epochs=5, loops=10, device=device, schedule
 	if save:
 		for i, ae in enumerate(aes):
 			torch.save(ae.state_dict(), f"/Volumes/Buffalo-SSD/AIStudy/AEs/pths/rand_ae{i+1}.pth")
+	
+	return aes
 
-	return aes, test_loader
-
-def random_test(aes, device=device, test_loader=None):
+def random_test(aes, device=None, test_loader=None, save_fig=False):
+	if device is None:
+		device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 	if test_loader is None:
 		_, test_loader = get_mnist_loaders(num_groups=len(aes))
 	for ae in aes:
@@ -101,15 +109,18 @@ def random_test(aes, device=device, test_loader=None):
 			axes[j+1, i].axis('off')
 		axes[j+1, 0].set_ylabel(f'Reconstructed AE{j+1}')
 	plt.tight_layout()
+	if save_fig:
+		plt.savefig("AEs/samples/randomAE_test.png")
 	plt.show()
 
 # Test the random AEs and visualize results
 if __name__ == "__main__":
-	aes, test_loader = random_train(
-		num_aes=16, 
+	num_aes = 16
+	aes = random_train(
+		num_aes=num_aes, 
 		pretrain_epochs=100, 
 		loops=100, 
 		scheduler_type='StepLR',
         scheduler_kwargs={'step_size': 100, 'gamma': 0.5}
 	)
-	random_test(aes, test_loader=test_loader)
+	random_test(aes)

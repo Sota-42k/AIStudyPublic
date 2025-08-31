@@ -3,9 +3,9 @@ import matplotlib.pyplot as plt
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from models import AE, VAE
+from Models import AE, VAE
 
-device = torch.device("mps")
+device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
 def get_all_model_outputs():
 	# Each row: [simpleAE, simpleVAE, mutualAE1, mutualAE2, mutualVAE1, mutualVAE2, randomAE1, randomAE2, randomAE3, randomVAE1, randomVAE2, randomVAE3]
@@ -125,9 +125,131 @@ def get_all_model_outputs():
 		outputs.append(row)
 		model_names.append(f'randomVAE{rand_vae_idx}')
 		rand_vae_idx += 1
+	# single teacher AE
+	from SingleTeacherAE import AE as STAE, single_teacher_test
+	st_ae_teacher = STAE().to(device)
+	st_ae_student = STAE().to(device)
+	pth_teacher = "../AEs/pths/teacher_ae.pth"
+	pth_student = "../AEs/pths/student_ae.pth"
+	if os.path.exists(pth_teacher):
+		st_ae_teacher.load_state_dict(torch.load(pth_teacher, map_location=device))
+	if os.path.exists(pth_student):
+		st_ae_student.load_state_dict(torch.load(pth_student, map_location=device))
+	st_ae_teacher.eval()
+	st_ae_student.eval()
+	row_teacher, row_student = [], []
+	with torch.no_grad():
+		for digit in range(10):
+			latent = torch.zeros((1, 32), device=device)
+			latent[0, digit % 32] = 1.0
+			img_teacher = st_ae_teacher.dec(latent).view(28, 28).cpu().numpy()
+			img_student = st_ae_student.dec(latent).view(28, 28).cpu().numpy()
+			row_teacher.append(img_teacher)
+			row_student.append(img_student)
+	outputs.append(row_teacher)
+	model_names.append('singleTeacherAE_Teacher')
+	outputs.append(row_student)
+	model_names.append('singleTeacherAE_Student')
+
+	# single teacher VAE
+	from SingleTeacherVAE import VAE as STVAE
+	st_vae_teacher = STVAE().to(device)
+	st_vae_student = STVAE().to(device)
+	pth_teacher = "../AEs/pths/teacher_vae1.pth"
+	pth_student = "../AEs/pths/student_vae2.pth"
+	if os.path.exists(pth_teacher):
+		st_vae_teacher.load_state_dict(torch.load(pth_teacher, map_location=device))
+	if os.path.exists(pth_student):
+		st_vae_student.load_state_dict(torch.load(pth_student, map_location=device))
+	st_vae_teacher.eval()
+	st_vae_student.eval()
+	row_teacher, row_student = [], []
+	with torch.no_grad():
+		for digit in range(10):
+			latent = torch.zeros((1, 16), device=device)
+			latent[0, digit % 16] = 1.0
+			img_teacher = st_vae_teacher.dec(latent).view(28, 28).cpu().numpy()
+			img_student = st_vae_student.dec(latent).view(28, 28).cpu().numpy()
+			row_teacher.append(img_teacher)
+			row_student.append(img_student)
+	outputs.append(row_teacher)
+	model_names.append('singleTeacherVAE_Teacher')
+	outputs.append(row_student)
+	model_names.append('singleTeacherVAE_Student')
+
+	# double teacher AE
+	from DoubleTeacherAE import AE as DTAE
+	dtae_teacher1 = DTAE().to(device)
+	dtae_teacher2 = DTAE().to(device)
+	dtae_student = DTAE().to(device)
+	pth_teacher1 = "../AEs/pths/teacher1_ae.pth"
+	pth_teacher2 = "../AEs/pths/teacher2_ae.pth"
+	pth_student = "../AEs/pths/student_ae.pth"
+	if os.path.exists(pth_teacher1):
+		dtae_teacher1.load_state_dict(torch.load(pth_teacher1, map_location=device))
+	if os.path.exists(pth_teacher2):
+		dtae_teacher2.load_state_dict(torch.load(pth_teacher2, map_location=device))
+	if os.path.exists(pth_student):
+		dtae_student.load_state_dict(torch.load(pth_student, map_location=device))
+	dtae_teacher1.eval()
+	dtae_teacher2.eval()
+	dtae_student.eval()
+	row_teacher1, row_teacher2, row_student = [], [], []
+	with torch.no_grad():
+		for digit in range(10):
+			latent = torch.zeros((1, 64), device=device)
+			latent[0, digit % 64] = 1.0
+			img_teacher1 = dtae_teacher1.dec(latent).view(28, 28).cpu().numpy()
+			img_teacher2 = dtae_teacher2.dec(latent).view(28, 28).cpu().numpy()
+			img_student = dtae_student.dec(latent).view(28, 28).cpu().numpy()
+			row_teacher1.append(img_teacher1)
+			row_teacher2.append(img_teacher2)
+			row_student.append(img_student)
+	outputs.append(row_teacher1)
+	model_names.append('doubleTeacherAE_Teacher1')
+	outputs.append(row_teacher2)
+	model_names.append('doubleTeacherAE_Teacher2')
+	outputs.append(row_student)
+	model_names.append('doubleTeacherAE_Student')
+
+	# double teacher VAE
+	from DoubleTeacherVAE import VAE as DTVAE
+	dtvae_teacher1 = DTVAE().to(device)
+	dtvae_teacher2 = DTVAE().to(device)
+	dtvae_student = DTVAE().to(device)
+	pth_teacher1 = "../AEs/pths/teacher1_vae.pth"
+	pth_teacher2 = "../AEs/pths/teacher2_vae.pth"
+	pth_student = "../AEs/pths/student_vae.pth"
+	if os.path.exists(pth_teacher1):
+		dtvae_teacher1.load_state_dict(torch.load(pth_teacher1, map_location=device))
+	if os.path.exists(pth_teacher2):
+		dtvae_teacher2.load_state_dict(torch.load(pth_teacher2, map_location=device))
+	if os.path.exists(pth_student):
+		dtvae_student.load_state_dict(torch.load(pth_student, map_location=device))
+	dtvae_teacher1.eval()
+	dtvae_teacher2.eval()
+	dtvae_student.eval()
+	row_teacher1, row_teacher2, row_student = [], [], []
+	with torch.no_grad():
+		for digit in range(10):
+			latent = torch.zeros((1, 32), device=device)
+			latent[0, digit % 32] = 1.0
+			img_teacher1 = dtvae_teacher1.dec(latent).view(28, 28).cpu().numpy()
+			img_teacher2 = dtvae_teacher2.dec(latent).view(28, 28).cpu().numpy()
+			img_student = dtvae_student.dec(latent).view(28, 28).cpu().numpy()
+			row_teacher1.append(img_teacher1)
+			row_teacher2.append(img_teacher2)
+			row_student.append(img_student)
+	outputs.append(row_teacher1)
+	model_names.append('doubleTeacherVAE_Teacher1')
+	outputs.append(row_teacher2)
+	model_names.append('doubleTeacherVAE_Teacher2')
+	outputs.append(row_student)
+	model_names.append('doubleTeacherVAE_Student')
+
 	return outputs, model_names
 
-def show_all_model_outputs():
+def show_all_model_outputs(save_fig=False):
 		outputs, model_names = get_all_model_outputs()
 		fig, axes = plt.subplots(len(outputs), 10, figsize=(20, 2*len(outputs)))
 		for row_idx, row in enumerate(outputs):
@@ -140,7 +262,9 @@ def show_all_model_outputs():
 			print(f"Displayed {model_names[row_idx]}")
 		plt.tight_layout()
 		plt.suptitle('All AE/VAE Model Outputs', fontsize=16, y=1.02)
+		if save_fig:
+			plt.savefig("AEs/samples/all_models.png")
 		plt.show()
 
 if __name__ == "__main__":
-	show_all_model_outputs()
+	show_all_model_outputs(save_fig=True)

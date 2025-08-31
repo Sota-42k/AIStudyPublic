@@ -7,13 +7,13 @@ import random
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from mnist import get_mnist_loaders
-from simpleVAE import vae_train
-from models import VAE
+from SimpleVAE import vae_train
+from Models import VAE
 
-device = torch.device("mps")
-
-def random_train(num_vaes=3, pretrain_epochs=5, loops=10, device=device, scheduler_type=None, scheduler_kwargs=None, save=True, beta=1.0):
-    train_loaders, test_loader = get_mnist_loaders(num_groups=num_vaes)
+def random_train(num_vaes=3, pretrain_epochs=5, loops=10, device=None, scheduler_type=None, scheduler_kwargs=None, save=True, beta=1.0):
+    if device is None:
+        device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    train_loaders, _ = get_mnist_loaders(num_groups=num_vaes)
     vaes = [vae_train(device=device, train_loader=train_loaders[i], epochs=pretrain_epochs, save=False, scheduler_type=None) for i in range(num_vaes)]
     opts = [optim.Adam(vae.parameters(), lr=1e-3) for vae in vaes]
     recon_loss = nn.MSELoss(reduction="mean")
@@ -58,7 +58,11 @@ def random_train(num_vaes=3, pretrain_epochs=5, loops=10, device=device, schedul
         mu, logvar = None, None
         for i in range(num_vaes):
             opts[order[i]].zero_grad()
-            out, mu, logvar = vaes[order[i]](input_imgs)
+            if i == order[-1]:
+                out, mu, logvar = vaes[order[i]](input_imgs)
+            else:
+                with torch.no_grad():
+                    out, mu, logvar = vaes[order[i]](input_imgs)
             # If not last VAE, pass output to next VAE
             if i < num_vaes-1:
                 input_imgs = out.view_as(input_imgs)
@@ -78,9 +82,11 @@ def random_train(num_vaes=3, pretrain_epochs=5, loops=10, device=device, schedul
         for i, vae in enumerate(vaes):
             torch.save(vae.state_dict(), f"/Volumes/Buffalo-SSD/AIStudy/AEs/pths/rand_vae{i+1}.pth")
 
-    return vaes, test_loader
+    return vaes
 
-def random_test(vaes, device=device, test_loader=None):
+def random_test(vaes, device=None, test_loader=None, save_fig=False):
+    if device is None:
+        device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
     if test_loader is None:
         _, test_loader = get_mnist_loaders(num_groups=len(vaes))
     for vae in vaes:
@@ -104,15 +110,18 @@ def random_test(vaes, device=device, test_loader=None):
             axes[j+1, i].axis('off')
         axes[j+1, 0].set_ylabel(f'Reconstructed VAE{j+1}')
     plt.tight_layout()
+    if save_fig:
+        plt.savefig("AEs/samples/randomVAE_test.png")
     plt.show()
 
 # Test the random VAEs and visualize results
 if __name__ == "__main__":
-    vaes, test_loader = random_train(
-		num_vaes=16, 
+    num_vaes = 16
+    vaes = random_train(
+		num_vaes=num_vaes, 
 		pretrain_epochs=100, 
 		loops=100, 
 		scheduler_type='StepLR',
         scheduler_kwargs={'step_size': 100, 'gamma': 0.5}
 	)
-    random_test(vaes, test_loader=test_loader)
+    random_test(vaes)
