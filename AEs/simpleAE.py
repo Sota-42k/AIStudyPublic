@@ -6,13 +6,14 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from mnist import get_mnist_loaders
-from models import AE
-
-device = torch.device("mps")
-train_loader, test_loader = get_mnist_loaders()
+from Models import AE
 
 # AE training
-def ae_train(device=device, train_loader=train_loader, epochs=10, save=True, scheduler_type=None, scheduler_kwargs=None):
+def ae_train(device=None, train_loader=None, epochs=10, save=True, scheduler_type=None, scheduler_kwargs=None):
+    if device is None: 
+        device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    if train_loader is None:
+        train_loader, _ = get_mnist_loaders()
     ae = AE().to(device)
     opt = optim.Adam(ae.parameters(), lr=1e-3)
     loss_fn = nn.MSELoss()
@@ -50,7 +51,10 @@ def ae_train(device=device, train_loader=train_loader, epochs=10, save=True, sch
     return ae
 
 # AE testing
-def ae_test(ae, device=device, test_loader=test_loader):
+def ae_test(ae, device=None, test_loader=None, save_fig=False):
+    if device is None: device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    if test_loader is None:
+        _, test_loader = get_mnist_loaders()
     ae.eval()
 
     imgs, labels = next(iter(test_loader))
@@ -69,8 +73,10 @@ def ae_test(ae, device=device, test_loader=test_loader):
     axes[0, 0].set_ylabel('Original')
     axes[1, 0].set_ylabel('Reconstructed AE')
     plt.tight_layout()
+    if save_fig:
+        plt.savefig("AEs/samples/simpleAE_test.png")
     plt.show()
 
 # Test the VAE and visualize results
 if __name__ == "__main__":
-    ae_test(ae_train())
+    ae_test(ae_train(), save_fig=True)

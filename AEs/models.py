@@ -25,7 +25,7 @@ class AE(nn.Module):
 
 # VAE definition
 class VAE(nn.Module):
-    def __init__(self, latent=16):
+    def __init__(self, latent=32):
         super().__init__()
         self.enc = nn.Sequential(
             nn.Flatten(), 

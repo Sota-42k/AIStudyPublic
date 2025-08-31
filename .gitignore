@@ -79,8 +79,10 @@ Thumbs.db
 
 # Ignore trained parameters and data directories
 AEs/pths/
-data/
+AEs/samples/
 GANs/pths/
+GANs/samples/
+data/
 
 # Ignore model weights and outputs
 *.pth
@@ -95,3 +97,6 @@ GANs/pths/
 *~
 *.swp
 *.swo
+
+# Ignore other notes
+Notes/
