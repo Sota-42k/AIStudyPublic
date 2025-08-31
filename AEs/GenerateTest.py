@@ -96,10 +96,12 @@ def save_per_model_images(outputs, model_names, model_groups):
 		print(f"Saved {name} -> {save_path}")
 
 def save_group_combined_images(outputs, model_names, model_groups, model_types):
-	"""mutual と random について、AE と VAE をそれぞれ1つの画像にまとめて保存"""
+	"""全てのグループについて、AE と VAE をそれぞれ1つの画像にまとめて保存"""
 	base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "samples")
 	os.makedirs(base_dir, exist_ok=True)
-	for group in ['mutual', 'random']:
+	# 既存の全グループを動的に検出（例: mutual, random, simple, single_teacher, double_teacher）
+	groups = sorted(set(model_groups))
+	for group in groups:
 		for mtype in ['ae', 'vae']:
 			indices = [i for i,(g,t) in enumerate(zip(model_groups, model_types)) if g==group and t==mtype]
 			label = f"{group}_{mtype}"
@@ -128,7 +130,7 @@ def save_group_combined_images(outputs, model_names, model_groups, model_types):
 			plt.close(fig)
 			print(f"Saved {label} -> {save_path}")
 
-def show_all_model_outputs(save_fig=False, save_per_model=False, save_group_combined=True):
+def show_all_model_outputs(save_fig=True, save_per_model=False, save_group_combined=True):
 	outputs, model_names, model_groups, model_types = get_all_model_outputs()
 	if not outputs:
 		print("No model outputs found. Check pth files under AEs/pths.")
@@ -156,5 +158,5 @@ def show_all_model_outputs(save_fig=False, save_per_model=False, save_group_comb
 	plt.show()
 
 if __name__ == "__main__":
-	# Save only the four combined images for mutual/random AEs/VAEs
-	show_all_model_outputs(save_fig=False, save_per_model=False, save_group_combined=True)
+	# グループごとの結合画像（全グループ対象）を保存
+	show_all_model_outputs()
