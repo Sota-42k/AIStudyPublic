@@ -80,8 +80,10 @@ Thumbs.db
 # Ignore trained parameters and data directories
 AEs/pths/
 AEs/samples/
+AEs/tests/
 GANs/pths/
 GANs/samples/
+GANs/tests/
 data/
 
 # Ignore model weights and outputs

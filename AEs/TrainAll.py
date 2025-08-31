@@ -48,7 +48,7 @@ def trainAll():
     print("Training Random Connection AE...")
     ae_random_train(
         num_aes=16,
-        pretrain_epochs=50,
+        pretrain_epochs=15,
         loops=50,
         save=True,
         scheduler_type='StepLR',
@@ -58,7 +58,7 @@ def trainAll():
     print("Training Random Connection VAE...")
     vae_random_train(
         num_vaes=16,
-        pretrain_epochs=50,
+        pretrain_epochs=15,
         loops=50,
         save=True,
         scheduler_type='StepLR',
@@ -67,7 +67,7 @@ def trainAll():
 
     print("Training Single Teacher AE...")
     single_teacher_ae_train(
-        epochs=100,
+        epochs=200,
         save=True,
         scheduler_type='StepLR',
         scheduler_kwargs={'step_size': 100, 'gamma': 0.5}
@@ -75,7 +75,7 @@ def trainAll():
 
     print("Training Single Teacher VAE...")
     single_teacher_vae_train(
-        epochs=100,
+        epochs=200,
         save=True,
         scheduler_type='StepLR',
         scheduler_kwargs={'step_size': 100, 'gamma': 0.5}
