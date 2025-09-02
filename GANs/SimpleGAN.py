@@ -24,6 +24,7 @@ def gan_train(
     scheduler_type=None,
     scheduler_kwargs=None,
     label_smooth=0.9,  # Change real label from 1.0 to 0.9
+    gen_cls_weight=1.0,  # weight for generator's class loss (AC-GAN)
 ):
     if device is None: device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
     if train_loader is None:
@@ -32,7 +33,8 @@ def gan_train(
     G = GeneratorDCGAN(z_dim).to(device).apply(weights_init)
     D = DiscriminatorDCGAN().to(device).apply(weights_init)
 
-    criterion = nn.BCEWithLogitsLoss()
+    criterion_gan = nn.BCEWithLogitsLoss()
+    criterion_cls = nn.CrossEntropyLoss()
     opt_G = optim.Adam(G.parameters(), lr=lr, betas=(beta1, 0.999))
     opt_D = optim.Adam(D.parameters(), lr=lr, betas=(beta1, 0.999))
 
@@ -50,44 +52,56 @@ def gan_train(
     sch_G, sch_D = build_sched(opt_G), build_sched(opt_D)
 
     fixed_z = torch.randn(64, z_dim, device=device)
+    # fixed labels for grid: cycle 0..9
+    fixed_labels = (torch.arange(64, device=device) % 10).long()
 
     for ep in range(1, epochs+1):
+        print(f"Epoch {ep}/{epochs} - starting")
         G.train(); D.train()
-        lossD_sum = 0.0; lossG_sum = 0.0
+        lossD_sum = 0.0; lossG_sum = 0.0; lossD_cls_sum = 0.0
 
-        for real, _ in train_loader:
+        for real, labels in train_loader:
             real = real.to(device)
+            labels = labels.to(device)
             b = real.size(0)
 
             # --- D update ---
             z = torch.randn(b, z_dim, device=device)
-            fake = G(z).detach()
+            fake = G(z, labels).detach()
             real_t = torch.full((b,1), fill_value=label_smooth, device=device)  # 0.9
             fake_t = torch.zeros((b,1), device=device)
 
             D.zero_grad()
-            out_real = D(real)
-            out_fake = D(fake)
-            lossD = criterion(out_real, real_t) + criterion(out_fake, fake_t)
+            out_real_gan, out_real_cls = D(real)
+            out_fake_gan, _ = D(fake)
+            # real/fake loss
+            lossD_gan = criterion_gan(out_real_gan, real_t) + criterion_gan(out_fake_gan, fake_t)
+            # class loss (only for real images)
+            lossD_cls = criterion_cls(out_real_cls, labels)
+            lossD = lossD_gan + lossD_cls
             lossD.backward()
             opt_D.step()
 
             # --- G update ---
             z = torch.randn(b, z_dim, device=device)
-            fake = G(z)
+            fake = G(z, labels)
             G.zero_grad()
-            out = D(fake)
-            # Want to make fake look real (=1)
-            lossG = criterion(out, torch.ones((b,1), device=device))
+            out_gan, out_cls = D(fake)
+            # Want to make fake look real (=1) and be classified as the target label
+            lossG_adv = criterion_gan(out_gan, torch.ones((b,1), device=device))
+            lossG_cls = criterion_cls(out_cls, labels)
+            lossG = lossG_adv + gen_cls_weight * lossG_cls
             lossG.backward()
             opt_G.step()
 
-            lossD_sum += lossD.item()
+            lossD_sum += lossD_gan.item()
+            lossD_cls_sum += lossD_cls.item()
             lossG_sum += lossG.item()
 
         avgD = lossD_sum / len(train_loader)
+        avgD_cls = lossD_cls_sum / len(train_loader)
         avgG = lossG_sum / len(train_loader)
-        print(f"[{ep:02d}/{epochs}] D: {avgD:.3f} | G: {avgG:.3f}")
+        print(f"[{ep:02d}/{epochs}] D: {avgD:.3f} | D_cls: {avgD_cls:.3f} | G: {avgG:.3f}")
 
         # schedulers step
         if sch_D:
@@ -97,29 +111,24 @@ def gan_train(
             if scheduler_type == "ReduceLROnPlateau": sch_G.step(avgG)
             else: sch_G.step()
 
-    # Save samples (only if save is True)
+
+        # Save samples (only if save is True)
         if save:
             with torch.no_grad():
                 G.eval()
-                samples = G(fixed_z).cpu()
-            
+                samples = G(fixed_z, fixed_labels).cpu()
             save_dir = "/Volumes/Buffalo-SSD/AIStudy/GANs/samples"
-
             os.makedirs(os.path.join(save_dir), exist_ok=True)
-
             grid = utils.make_grid(samples, nrow=8, normalize=True, value_range=(-1,1))
             utils.save_image(grid, os.path.join(save_dir, f"epoch_{ep:02d}.png"))
 
     if save:
         save_dir = "/Volumes/Buffalo-SSD/AIStudy/GANs/pths"
-
         os.makedirs(save_dir, exist_ok=True)
         os.makedirs(os.path.join(save_dir), exist_ok=True)
-
         torch.save(G.state_dict(), os.path.join(save_dir, "g.pth"))
         torch.save(D.state_dict(), os.path.join(save_dir, "d.pth"))
         print(f"Saved to {save_dir}")
-
     return G, D
 
 # Test: Generate images with trained G (save only)
@@ -129,7 +138,8 @@ def gan_test(G, device=None, z_dim=100, n=64):
     G.eval()
     with torch.no_grad():
         z = torch.randn(n, z_dim, device=device)
-        imgs = G(z).cpu()
+    labels = (torch.arange(n, device=device) % 10).long()
+    imgs = G(z, labels).cpu()
     out_path = "/Volumes/Buffalo-SSD/AIStudy/GANs/samples/gan_samples.png"
     grid = utils.make_grid(imgs, nrow=8, normalize=True, value_range=(-1,1))
     utils.save_image(grid, out_path)

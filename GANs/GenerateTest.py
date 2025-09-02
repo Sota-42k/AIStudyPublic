@@ -7,6 +7,20 @@ from Models import GeneratorDCGAN
 
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu") if torch.backends.mps.is_available() else torch.device("cpu")
 
+def _load_generator_partial(model, checkpoint_path, device):
+    state = torch.load(checkpoint_path, map_location=device, weights_only=True)
+    model_state = model.state_dict()
+    filtered = {}
+    for k, v in state.items():
+        if k in model_state and model_state[k].shape == v.shape:
+            filtered[k] = v
+    missing = [k for k in model_state.keys() if k not in filtered]
+    if missing:
+        print(f"Note: skipping {len(missing)} keys due to shape mismatch or missing: e.g., {missing[:3]}")
+    model.load_state_dict(filtered, strict=False)
+    return model
+
+
 def get_all_gan_outputs(z_dim=100, n=10):
     outputs = []
     model_names = []
@@ -14,11 +28,12 @@ def get_all_gan_outputs(z_dim=100, n=10):
     g_path = "GANs/pths/g.pth"
     if os.path.exists(g_path):
         G = GeneratorDCGAN(z_dim).to(device)
-        G.load_state_dict(torch.load(g_path, map_location=device))
+        G = _load_generator_partial(G, g_path, device)
         G.eval()
         with torch.no_grad():
             z = torch.randn(n, z_dim, device=device)
-            imgs = G(z).cpu().numpy()
+            labels = (torch.arange(n, device=device) % 10).long()
+            imgs = G(z, labels).cpu().numpy()
         outputs.append(imgs)
         model_names.append('simpleGAN')
     # Add more GANs if you have more generator .pth files
@@ -28,11 +43,12 @@ def get_all_gan_outputs(z_dim=100, n=10):
         if not os.path.exists(pth):
             break
         G = GeneratorDCGAN(z_dim).to(device)
-        G.load_state_dict(torch.load(pth, map_location=device))
+        G = _load_generator_partial(G, pth, device)
         G.eval()
         with torch.no_grad():
             z = torch.randn(n, z_dim, device=device)
-            imgs = G(z).cpu().numpy()
+            labels = (torch.arange(n, device=device) % 10).long()
+            imgs = G(z, labels).cpu().numpy()
         outputs.append(imgs)
         model_names.append(f'randomGAN{rand_gan_idx}')
         rand_gan_idx += 1
