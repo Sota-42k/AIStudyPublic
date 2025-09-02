@@ -4,7 +4,7 @@ import torch
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from Models import AE, VAE
+from Models import ConditionalAE as AE, ConditionalVAE as VAE
 from mnist import get_mnist_loaders
 
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu") if torch.backends.mps.is_available() else torch.device("cpu")
@@ -50,14 +50,16 @@ def load_models():
 		if not os.path.exists(pth):
 			continue
 		model = model_class().to(device)
-		model.load_state_dict(torch.load(pth, map_location=device))
+		state = torch.load(pth, map_location=device)
+		model.load_state_dict(state, strict=False)
 		model.eval()
 		models[label] = model
 		model_names.append(label)
 	return models, model_names
 
 
-def guess_digit(model, img, latent_dim=32):
+def guess_digit(model, img):
+	"""Predict digit by picking label with smallest reconstruction error using conditional forward."""
 	img = img.to(device)
 	if img.dim() == 3:
 		img = img.unsqueeze(0)
@@ -66,10 +68,10 @@ def guess_digit(model, img, latent_dim=32):
 	min_err = float('inf')
 	best_digit = -1
 	for digit in range(10):
-		latent = torch.zeros((1, latent_dim), device=device)
-		latent[0, digit % latent_dim] = 1.0
+		y = torch.tensor([digit], device=device, dtype=torch.long)
 		with torch.no_grad():
-			recon = model.dec(latent).view(1, 1, 28, 28)
+			out = model(img, y)
+			recon = out[0] if isinstance(out, (tuple, list)) else out
 		err = torch.nn.functional.mse_loss(recon, img).item()
 		if err < min_err:
 			min_err = err
@@ -95,8 +97,7 @@ def test_models_on_mnist():
 		label = labels[idx]
 		for name in model_names:
 			model = models[name]
-			latent_dim = 32
-			pred = guess_digit(model, img, latent_dim=latent_dim)
+			pred = guess_digit(model, img)
 			if pred == label:
 				results[name] += 1
 	print("Results for 10 random test images:")
