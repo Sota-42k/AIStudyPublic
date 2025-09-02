@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from Models import GeneratorDCGAN
+from Models import CondGeneratorDCGAN
 
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu") if torch.backends.mps.is_available() else torch.device("cpu")
 
@@ -27,7 +27,7 @@ def get_all_gan_outputs(z_dim=100, n=10):
     # simpleGAN
     g_path = "GANs/pths/g.pth"
     if os.path.exists(g_path):
-        G = GeneratorDCGAN(z_dim).to(device)
+        G = CondGeneratorDCGAN(z_dim).to(device)
         G = _load_generator_partial(G, g_path, device)
         G.eval()
         with torch.no_grad():
@@ -42,7 +42,7 @@ def get_all_gan_outputs(z_dim=100, n=10):
         pth = f"GANs/pths/rand_gan{rand_gan_idx}.pth"
         if not os.path.exists(pth):
             break
-        G = GeneratorDCGAN(z_dim).to(device)
+        G = CondGeneratorDCGAN(z_dim).to(device)
         G = _load_generator_partial(G, pth, device)
         G.eval()
         with torch.no_grad():
