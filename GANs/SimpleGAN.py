@@ -10,7 +10,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Reuse the existing MNIST loader (be sure to normalize to [-1,1])
 # Example: transforms.Normalize((0.5,), (0.5,))
 from mnist import get_mnist_loaders
-from Models import GeneratorDCGAN, DiscriminatorDCGAN, weights_init
+from Models import CondGeneratorDCGAN, CondDiscriminatorDCGAN, weights_init
 
 # 学習
 def gan_train(
@@ -30,8 +30,8 @@ def gan_train(
     if train_loader is None:
         train_loader, _ = get_mnist_loaders()  # This function normalizes to [-1,1] inside
 
-    G = GeneratorDCGAN(z_dim).to(device).apply(weights_init)
-    D = DiscriminatorDCGAN().to(device).apply(weights_init)
+    G = CondGeneratorDCGAN(z_dim).to(device).apply(weights_init)
+    D = CondDiscriminatorDCGAN().to(device).apply(weights_init)
 
     criterion_gan = nn.BCEWithLogitsLoss()
     criterion_cls = nn.CrossEntropyLoss()

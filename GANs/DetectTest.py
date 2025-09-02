@@ -8,7 +8,7 @@ import torch
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from mnist import get_mnist_loaders
-from Models import DiscriminatorDCGAN
+from Models import CondDiscriminatorDCGAN
 
 
 device = (
@@ -16,17 +16,17 @@ device = (
 )
 
 
-def load_discriminator(pth: str = "GANs/pths/d.pth") -> DiscriminatorDCGAN:
+def load_discriminator(pth: str = "GANs/pths/d.pth") -> CondDiscriminatorDCGAN:
     if not os.path.exists(pth):
         raise FileNotFoundError(f"Discriminator checkpoint not found: {pth}")
-    model = DiscriminatorDCGAN().to(device)
+    model = CondDiscriminatorDCGAN().to(device)
     state = torch.load(pth, map_location=device)
     model.load_state_dict(state, strict=False)
     model.eval()
     return model
 
 
-def predict_digit_with_discriminator(D: DiscriminatorDCGAN, img: torch.Tensor) -> int:
+def predict_digit_with_discriminator(D: CondDiscriminatorDCGAN, img: torch.Tensor) -> int:
     """Predict digit using the discriminator's class head (argmax over logits)."""
     if img.dim() == 3:
         img = img.unsqueeze(0)
