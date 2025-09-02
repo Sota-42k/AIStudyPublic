@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))  # ensure AEs/ is on path
-from Models import AE, VAE
+from Models import ConditionalAE as AE, ConditionalVAE as VAE
 
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
@@ -57,19 +57,14 @@ def get_all_model_outputs():
 			print(f"Skip {label}: '{pth_name}' not found under {PTH_DIR}")
 			continue
 		model = model_class().to(device)
-		model.load_state_dict(torch.load(pth, map_location=device))
+		state = torch.load(pth, map_location=device, weights_only=True)
+		model.load_state_dict(state, strict=False)
 		model.eval()
-		# 推論に使うlatent次元はデコーダの最初のLinear層のin_featuresから推定
-		if isinstance(model.dec[0], torch.nn.Linear):
-			latent_dim = model.dec[0].in_features
-		else:
-			latent_dim = 32
 		row = []
 		with torch.no_grad():
 			for digit in range(10):
-				latent = torch.zeros((1, latent_dim), device=device)
-				latent[0, digit % latent_dim] = 1.0
-				img = model.dec(latent).view(28, 28).cpu().numpy()
+				imgs = model.generate(digit, n=1)
+				img = imgs[0].view(28, 28).cpu().numpy()
 				row.append(img)
 		outputs.append(row)
 		model_names.append(label)
