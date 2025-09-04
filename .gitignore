@@ -102,6 +102,3 @@ ImageGeneration/data/
 *~
 *.swp
 *.swo
-
-# Ignore other notes
-Notes/
