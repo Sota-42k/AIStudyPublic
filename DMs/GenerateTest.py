@@ -6,10 +6,13 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from DMs.Models import ConditionalDDPM
 from torchvision.utils import save_image, make_grid
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 device = torch.device("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
 
 
-def load_ddpm(pth: str = "DMs/ddpm_mnist_cond.pth", timesteps=1000, num_classes=10):
+def load_ddpm(pth: str = None, timesteps=1000, num_classes=10):
+    if pth is None:
+        pth = os.path.join(BASE_DIR, "pths", "ddpm.pth")
     if not os.path.exists(pth):
         raise FileNotFoundError(f"DDPM checkpoint not found: {pth}")
     model = ConditionalDDPM(num_classes=num_classes, timesteps=timesteps, device=device)
@@ -19,7 +22,9 @@ def load_ddpm(pth: str = "DMs/ddpm_mnist_cond.pth", timesteps=1000, num_classes=
     return model
 
 
-def generate_and_save_samples(model, save_dir="samples_ddpm_generate", n_per_digit=8):
+def generate_and_save_samples(model, save_dir=None, n_per_digit=8):
+    if save_dir is None:
+        save_dir = os.path.join(BASE_DIR, "tests")
     os.makedirs(save_dir, exist_ok=True)
     all_samples = []
     for digit in range(10):

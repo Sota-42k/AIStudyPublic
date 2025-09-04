@@ -84,6 +84,9 @@ AEs/tests/
 GANs/pths/
 GANs/samples/
 GANs/tests/
+DMs/pths/
+DMs/samples/
+DMs/tests/
 data/
 
 # Ignore model weights and outputs

@@ -8,6 +8,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from mnist import get_mnist_loaders
 from SimpleVAE import vae_train
 
+# base directory for saving relative to this file
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 def mutual_train(pretrain_epochs=5, loops=1000, device=None, train_loaders=None, save=True, scheduler_type=None, scheduler_kwargs=None):
     if device is None:
         device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
@@ -110,7 +113,8 @@ def mutual_test(vae1, vae2, device=None, test_loader=None, save_fig=False):
     axes[3, 0].set_ylabel('Predicted')
     plt.tight_layout()
     if save_fig:
-        plt.savefig("AEs/samples/mutualVAE_test.png")
+        os.makedirs(os.path.join(BASE_DIR, "samples"), exist_ok=True)
+        plt.savefig(os.path.join(BASE_DIR, "samples", "mutualVAE_test.png"))
     plt.show()
 
 # Test the VAEs and visualize results

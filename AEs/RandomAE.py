@@ -10,6 +10,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from mnist import get_mnist_loaders
 from SimpleAE import ae_train
 
+# base directory for saving relative to this file
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 def random_train(num_aes=3, pretrain_epochs=5, loops=1000, device=None, scheduler_type=None, scheduler_kwargs=None, save=True):
 	if device is None:
 		device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
@@ -68,7 +71,8 @@ def random_train(num_aes=3, pretrain_epochs=5, loops=1000, device=None, schedule
 			if scheduler_type == 'ReduceLROnPlateau': scheduler.step(loss.item())
 			else: scheduler.step()
 	if save:
-		base = "/Volumes/Buffalo-SSD/AIStudy/AEs/pths"
+		base = os.path.join(BASE_DIR, "pths")
+		os.makedirs(base, exist_ok=True)
 		for i, ae in enumerate(aes):
 			torch.save(ae.state_dict(), os.path.join(base, f"rand_ae{i+1}.pth"))
 		print("Saved RandomAE models")
@@ -111,7 +115,8 @@ def random_test(aes, device=None, test_loader=None, save_fig=False):
 	axes[len(aes)+1, 0].set_ylabel('Predicted')
 	plt.tight_layout()
 	if save_fig:
-		plt.savefig("AEs/samples/randomAE_test.png")
+		os.makedirs(os.path.join(BASE_DIR, "samples"), exist_ok=True)
+		plt.savefig(os.path.join(BASE_DIR, "samples", "randomAE_test.png"))
 	plt.show()
 
 # Test the random AEs and visualize results

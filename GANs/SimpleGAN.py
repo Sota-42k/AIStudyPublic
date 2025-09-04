@@ -7,6 +7,9 @@ import torch.optim as optim
 from torchvision import utils
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# base directory for saving relative to this file's parent (so running from any CWD works)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # Reuse the existing MNIST loader (be sure to normalize to [-1,1])
 # Example: transforms.Normalize((0.5,), (0.5,))
 from mnist import get_mnist_loaders
@@ -117,15 +120,14 @@ def gan_train(
             with torch.no_grad():
                 G.eval()
                 samples = G(fixed_z, fixed_labels).cpu()
-            save_dir = "/Volumes/Buffalo-SSD/AIStudy/GANs/samples"
-            os.makedirs(os.path.join(save_dir), exist_ok=True)
+            save_dir = os.path.join(BASE_DIR, "samples")
+            os.makedirs(save_dir, exist_ok=True)
             grid = utils.make_grid(samples, nrow=8, normalize=True, value_range=(-1,1))
             utils.save_image(grid, os.path.join(save_dir, f"epoch_{ep:02d}.png"))
 
     if save:
-        save_dir = "/Volumes/Buffalo-SSD/AIStudy/GANs/pths"
+        save_dir = os.path.join(BASE_DIR, "pths")
         os.makedirs(save_dir, exist_ok=True)
-        os.makedirs(os.path.join(save_dir), exist_ok=True)
         torch.save(G.state_dict(), os.path.join(save_dir, "g.pth"))
         torch.save(D.state_dict(), os.path.join(save_dir, "d.pth"))
         print(f"Saved to {save_dir}")
@@ -134,13 +136,15 @@ def gan_train(
 # Test: Generate images with trained G (save only)
 def gan_test(G, device=None, z_dim=100, n=64):
     if device is None: device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    save_dir = os.path.join(BASE_DIR, "tests")
+    os.makedirs(save_dir, exist_ok=True)
     G = G.to(device)
     G.eval()
     with torch.no_grad():
         z = torch.randn(n, z_dim, device=device)
     labels = (torch.arange(n, device=device) % 10).long()
     imgs = G(z, labels).cpu()
-    out_path = "/Volumes/Buffalo-SSD/AIStudy/GANs/samples/gan_samples.png"
+    out_path = os.path.join(save_dir, "gan_samples.png")
     grid = utils.make_grid(imgs, nrow=8, normalize=True, value_range=(-1,1))
     utils.save_image(grid, out_path)
     print(f"Saved samples -> {out_path}")

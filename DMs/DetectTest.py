@@ -8,11 +8,14 @@ from mnist import get_mnist_loaders
 import torch.nn.functional as F
 
 
-device = torch.device("mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
 # Use the denoising network as a digit classifier by passing each possible label and picking the one with lowest denoising error
 
-def load_ddpm(pth: str = "DMs/ddpm_mnist_cond.pth", timesteps=1000, num_classes=10):
+def load_ddpm(pth: str = None, timesteps=1000, num_classes=10):
+    if pth is None:
+        pth = os.path.join(BASE_DIR, "pths", "ddpm.pth")
     if not os.path.exists(pth):
         raise FileNotFoundError(f"DDPM checkpoint not found: {pth}")
     model = ConditionalDDPM(num_classes=num_classes, timesteps=timesteps, device=device)

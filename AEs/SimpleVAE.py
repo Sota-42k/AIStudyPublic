@@ -8,6 +8,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from mnist import get_mnist_loaders, get_mnist_digit_loader
 from Models import ConditionalVAE as VAE
 
+# base directory for saving relative to this file
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # VAE training
 def vae_train(device=None, train_loader=None, epochs=10, save=True, scheduler_type=None, scheduler_kwargs=None):
     if device is None: device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
@@ -50,7 +53,9 @@ def vae_train(device=None, train_loader=None, epochs=10, save=True, scheduler_ty
                 else:
                     scheduler.step()
     if save:
-        torch.save(vae.state_dict(), os.path.join(os.path.dirname(__file__), "pths", "vae.pth"))
+        save_path = os.path.join(BASE_DIR, "pths", "vae.pth")
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        torch.save(vae.state_dict(), save_path)
     return vae
 
 # VAE testing
@@ -83,7 +88,8 @@ def vae_test(vae, device=None, test_loader=None, save_fig=False):
     axes[2, 0].set_ylabel('Predicted')
     plt.tight_layout()
     if save_fig:
-        plt.savefig("AEs/samples/simpleVAE_test.png")
+        os.makedirs(os.path.join(BASE_DIR, "samples"), exist_ok=True)
+        plt.savefig(os.path.join(BASE_DIR, "samples", "simpleVAE_test.png"))
     plt.show()
 
 # Test the VAE and visualize results

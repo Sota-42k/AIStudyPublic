@@ -1,20 +1,18 @@
 # Test for digit recognition using AE/VAE models on 10 random MNIST test images
-
 import torch
 import os
 import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import sys
 from Models import ConditionalAE as AE, ConditionalVAE as VAE
 from mnist import get_mnist_loaders
-
+from mnist import get_mnist_loaders
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu") if torch.backends.mps.is_available() else torch.device("cpu")
-
-
+device = torch.device("mps" if torch.backends.mps.is_available() else "cpu") if torch.backends.mps.is_available() else torch.device("cpu")
 def load_models():
 	models = {}
 	model_names = []
 	print("Loading models...")
-	# モデル情報リスト: (pth, モデルクラス, ラベル)
 	model_info = [
 		("ae.pth", AE, 'simpleAE'),
 		("vae.pth", VAE, 'simpleVAE'),
@@ -27,11 +25,11 @@ def load_models():
 		("d_student_ae.pth", AE, 'doubleTeacherAE'),
 		("d_student_vae.pth", VAE, 'doubleTeacherVAE'),
 	]
-	# randomAE / randomVAE (自動検出)
+	# auto-detect random models present in pths/
 	rand_ae_idx = 1
 	while True:
 		pth = f"rand_ae{rand_ae_idx}.pth"
-		full_pth = f"AEs/pths/{pth}"
+		full_pth = os.path.join(BASE_DIR, "pths", pth)
 		if not os.path.exists(full_pth):
 			break
 		model_info.append((pth, AE, f'randomAE{rand_ae_idx}'))
@@ -39,14 +37,14 @@ def load_models():
 	rand_vae_idx = 1
 	while True:
 		pth = f"rand_vae{rand_vae_idx}.pth"
-		full_pth = f"AEs/pths/{pth}"
+		full_pth = os.path.join(BASE_DIR, "pths", pth)
 		if not os.path.exists(full_pth):
 			break
 		model_info.append((pth, VAE, f'randomVAE{rand_vae_idx}'))
 		rand_vae_idx += 1
 
 	for pth_name, model_class, label in model_info:
-		pth = f"AEs/pths/{pth_name}"
+		pth = os.path.join(BASE_DIR, "pths", pth_name)
 		if not os.path.exists(pth):
 			continue
 		model = model_class().to(device)

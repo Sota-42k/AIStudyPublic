@@ -8,6 +8,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from mnist import get_mnist_loaders, get_mnist_digit_loader
 from Models import ConditionalAE as AE
 
+# base directory for saving relative to this file
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # AE training
 def ae_train(device=None, epochs=10, save=True, scheduler_type=None, scheduler_kwargs=None, train_loader=None):
     if device is None:
@@ -48,7 +51,8 @@ def ae_train(device=None, epochs=10, save=True, scheduler_type=None, scheduler_k
                 else:
                     scheduler.step()
     if save:
-        save_path = f"/Volumes/Buffalo-SSD/AIStudy/AEs/pths/ae.pth"
+        save_path = os.path.join(BASE_DIR, "pths", "ae.pth")
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
         torch.save(ae.state_dict(), save_path)
         print(f"Saved AE model to {save_path}")
     return ae
@@ -82,7 +86,8 @@ def ae_test(ae, device=None, test_loader=None, save_fig=False):
     axes[2, 0].set_ylabel('Predicted')
     plt.tight_layout()
     if save_fig:
-        plt.savefig("AEs/samples/simpleAE_test.png")
+        os.makedirs(os.path.join(BASE_DIR, "samples"), exist_ok=True)
+        plt.savefig(os.path.join(BASE_DIR, "samples", "simpleAE_test.png"))
     plt.show()
 
 # Test the AE and visualize results
