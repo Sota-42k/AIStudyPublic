@@ -6,8 +6,11 @@ import os
 import random
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from mnist import get_mnist_loaders
+from ImageGeneration.mnist import get_mnist_loaders
 from SimpleVAE import vae_train
+
+# base directory for saving relative to this file
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def random_train(num_vaes=3, pretrain_epochs=5, loops=1000, device=None, scheduler_type=None, scheduler_kwargs=None, save=True, beta=1.0):
     if device is None:
@@ -69,7 +72,7 @@ def random_train(num_vaes=3, pretrain_epochs=5, loops=1000, device=None, schedul
             if scheduler_type == 'ReduceLROnPlateau': scheduler.step(loss.item())
             else: scheduler.step()
     if save:
-        base = os.path.join(os.path.dirname(__file__), "pths")
+        base = os.path.join(BASE_DIR, "pths")
         for i, vae in enumerate(vaes):
             torch.save(vae.state_dict(), os.path.join(base, f"rand_vae{i+1}.pth"))
         print("Saved RandomVAE models")
@@ -112,7 +115,8 @@ def random_test(vaes, device=None, test_loader=None, save_fig=False):
     axes[len(vaes)+1, 0].set_ylabel('Predicted')
     plt.tight_layout()
     if save_fig:
-        plt.savefig("AEs/samples/randomVAE_test.png")
+        os.makedirs(os.path.join(BASE_DIR, "samples"), exist_ok=True)
+        plt.savefig(os.path.join(BASE_DIR, "samples", "randomVAE_test.png"))
     plt.show()
 
 # Test the random VAEs and visualize results

@@ -78,13 +78,16 @@ Thumbs.db
 # Project-specific
 
 # Ignore trained parameters and data directories
-AEs/pths/
-AEs/samples/
-AEs/tests/
-GANs/pths/
-GANs/samples/
-GANs/tests/
-data/
+ImageGeneration/AEs/pths/
+ImageGeneration/AEs/samples/
+ImageGeneration/AEs/tests/
+ImageGeneration/GANs/pths/
+ImageGeneration/GANs/samples/
+ImageGeneration/GANs/tests/
+ImageGeneration/DMs/pths/
+ImageGeneration/DMs/samples/
+ImageGeneration/DMs/tests/
+ImageGeneration/data/
 
 # Ignore model weights and outputs
 *.pth
@@ -99,6 +102,3 @@ data/
 *~
 *.swp
 *.swo
-
-# Ignore other notes
-Notes/

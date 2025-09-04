@@ -5,6 +5,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from Models import CondGeneratorDCGAN
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu") if torch.backends.mps.is_available() else torch.device("cpu")
 
 def _load_generator_partial(model, checkpoint_path, device):
@@ -25,7 +26,7 @@ def get_all_gan_outputs(z_dim=100, n=10):
     outputs = []
     model_names = []
     # simpleGAN
-    g_path = "GANs/pths/g.pth"
+    g_path = os.path.join(BASE_DIR, "pths", "g.pth")
     if os.path.exists(g_path):
         G = CondGeneratorDCGAN(z_dim).to(device)
         G = _load_generator_partial(G, g_path, device)
@@ -64,7 +65,9 @@ def show_all_gan_outputs(save_fig=False, z_dim=100, n=10):
             axes[col_idx].set_title(col_idx)
         plt.suptitle(model_names[row_idx])
         if save_fig:
-            plt.savefig(f"GANs/tests/{model_names[row_idx]}.png")
+            save_dir = os.path.join(BASE_DIR, "tests")
+            os.makedirs(save_dir, exist_ok=True)
+            plt.savefig(os.path.join(save_dir, f"{model_names[row_idx]}.png"))
         plt.show()
         print(f"Displayed {model_names[row_idx]}")
 

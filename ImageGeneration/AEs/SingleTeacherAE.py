@@ -4,8 +4,11 @@ import torch.nn as nn
 import torch.optim as optim
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from mnist import get_mnist_loaders
+from ImageGeneration.mnist import get_mnist_loaders
 from Models import ConditionalAE as AE
+
+# base directory for saving relative to this file
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def single_teacher_train(device=None, epochs=10, save=True, scheduler_type=None, scheduler_kwargs=None):
 	if device is None:
@@ -64,7 +67,8 @@ def single_teacher_train(device=None, epochs=10, save=True, scheduler_type=None,
 				if scheduler_type == 'ReduceLROnPlateau': scheduler2.step(loss2.item())
 				else: scheduler2.step()
 	if save:
-		base = os.path.join(os.path.dirname(__file__), 'pths')
+		base = os.path.join(BASE_DIR, 'pths')
+		os.makedirs(base, exist_ok=True)
 		torch.save(ae1.state_dict(), os.path.join(base, 's_teacher_ae.pth'))
 		torch.save(ae2.state_dict(), os.path.join(base, 's_student_ae.pth'))
 		print('Saved SingleTeacherAE models')
@@ -105,7 +109,8 @@ def single_teacher_test(ae1, ae2, device=None, test_loader=None, save_fig=False)
 	axes[3, 0].set_ylabel('Predicted')
 	plt.tight_layout()
 	if save_fig:
-		plt.savefig('single_teacher_ae_test.png')
+		os.makedirs(os.path.join(BASE_DIR, 'samples'), exist_ok=True)
+		plt.savefig(os.path.join(BASE_DIR, 'samples', 'single_teacher_ae_test.png'))
 	plt.show()
 
 if __name__ == "__main__":

@@ -7,16 +7,20 @@ import torch
 # add project root to path to import shared modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from mnist import get_mnist_loaders
+from ImageGeneration.mnist import get_mnist_loaders
 from Models import CondDiscriminatorDCGAN
 
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 device = (
     torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
 )
 
 
-def load_discriminator(pth: str = "GANs/pths/d.pth") -> CondDiscriminatorDCGAN:
+def load_discriminator(pth: str = None) -> CondDiscriminatorDCGAN:
+    if pth is None:
+        pth = os.path.join(BASE_DIR, "pths", "d.pth")
     if not os.path.exists(pth):
         raise FileNotFoundError(f"Discriminator checkpoint not found: {pth}")
     model = CondDiscriminatorDCGAN().to(device)
