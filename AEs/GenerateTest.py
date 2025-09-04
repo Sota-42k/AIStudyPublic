@@ -9,6 +9,7 @@ device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
 # Base directory for pth files (AEs/pths)
 PTH_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pths")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def get_all_model_outputs():
 	outputs = []
@@ -75,7 +76,7 @@ def get_all_model_outputs():
 
 def save_per_model_images(outputs, model_names, model_groups):
 	"""各モデルごとの1x10グリッド画像をグループ別フォルダに保存します。"""
-	base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "samples")
+	base_dir = os.path.join(BASE_DIR, "samples")
 	for row, name, group in zip(outputs, model_names, model_groups):
 		group_dir = os.path.join(base_dir, group)
 		os.makedirs(group_dir, exist_ok=True)
@@ -86,6 +87,7 @@ def save_per_model_images(outputs, model_names, model_groups):
 			axes[col_idx].set_title(str(col_idx))
 		plt.suptitle(name, fontsize=12)
 		save_path = os.path.join(group_dir, f"{name}.png")
+		os.makedirs(group_dir, exist_ok=True)
 		plt.savefig(save_path, bbox_inches='tight')
 		plt.close(fig)
 		print(f"Saved {name} -> {save_path}")
