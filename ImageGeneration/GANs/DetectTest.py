@@ -7,7 +7,7 @@ import torch
 # add project root to path to import shared modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from mnist import get_mnist_loaders
+from ImageGeneration.mnist import get_mnist_loaders
 from Models import CondDiscriminatorDCGAN
 
 

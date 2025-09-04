@@ -4,8 +4,8 @@ import os
 import sys
 import sys
 from Models import ConditionalAE as AE, ConditionalVAE as VAE
-from mnist import get_mnist_loaders
-from mnist import get_mnist_loaders
+from ImageGeneration.mnist import get_mnist_loaders
+from ImageGeneration.mnist import get_mnist_loaders
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu") if torch.backends.mps.is_available() else torch.device("cpu")
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu") if torch.backends.mps.is_available() else torch.device("cpu")

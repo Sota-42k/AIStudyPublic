@@ -12,7 +12,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Reuse the existing MNIST loader (be sure to normalize to [-1,1])
 # Example: transforms.Normalize((0.5,), (0.5,))
-from mnist import get_mnist_loaders
+from ImageGeneration.mnist import get_mnist_loaders
 from Models import CondGeneratorDCGAN, CondDiscriminatorDCGAN, weights_init
 
 # 学習
