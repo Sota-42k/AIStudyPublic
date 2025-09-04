@@ -1,8 +1,6 @@
 # Test for digit recognition using AE/VAE models on 10 random MNIST test images
 import torch
 import os
-import sys
-import sys
 from Models import ConditionalAE as AE, ConditionalVAE as VAE
 from ImageGeneration.mnist import get_mnist_loaders
 from ImageGeneration.mnist import get_mnist_loaders
