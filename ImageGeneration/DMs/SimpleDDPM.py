@@ -11,7 +11,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 from Models import ConditionalDDPM, get_timestep_embedding
-from mnist import get_mnist_loaders
+from ImageGeneration.mnist import get_mnist_loaders
 
 
 def ddpm_train(

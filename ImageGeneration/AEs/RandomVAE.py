@@ -6,7 +6,7 @@ import os
 import random
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from mnist import get_mnist_loaders
+from ImageGeneration.mnist import get_mnist_loaders
 from SimpleVAE import vae_train
 
 # base directory for saving relative to this file
