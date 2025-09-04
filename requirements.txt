@@ -1,0 +1,4 @@
+# Core deep learning libraries
+torch
+torchvision
+matplotlib
